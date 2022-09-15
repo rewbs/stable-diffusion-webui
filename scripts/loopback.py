@@ -1,4 +1,5 @@
 import numpy as np
+import logging
 from tqdm import trange
 
 import modules.scripts as scripts
@@ -61,6 +62,10 @@ class Script(scripts.Script):
                 p.init_images = [init_img]
                 p.seed = processed.seed + 1
                 p.denoising_strength = min(max(p.denoising_strength * denoising_strength_change_factor, 0.1), 1)
+                
+                # Keep the correction targets used for the first generated image.
+                p.color_corrections = p.color_corrections or processed.color_corrections
+                
                 history.append(processed.images[0])
 
             grid = images.image_grid(history, rows=1)

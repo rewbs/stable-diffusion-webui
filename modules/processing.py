@@ -3,6 +3,7 @@ import json
 import math
 import os
 import sys
+import logging
 
 import torch
 import numpy as np
@@ -28,11 +29,13 @@ opt_f = 8
 
 
 def setup_color_correction(image):
+    logging.info("Computing new color correction target")
     correction_target = cv2.cvtColor(np.asarray(image.copy()), cv2.COLOR_RGB2LAB)
     return correction_target
 
 
 def apply_color_correction(correction, image):
+    logging.info("Applying color correction.")
     image = Image.fromarray(cv2.cvtColor(exposure.match_histograms(
         cv2.cvtColor(
             np.asarray(image),
@@ -94,6 +97,7 @@ class Processed:
         self.sampler = samplers[p.sampler_index].name
         self.cfg_scale = p.cfg_scale
         self.steps = p.steps
+        self.color_corrections = p.color_corrections
 
     def js(self):
         obj = {
@@ -291,6 +295,7 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
                 image = Image.fromarray(x_sample)
 
                 if p.color_corrections is not None and i < len(p.color_corrections):
+                    logging.info("About to apply color correction %s", i)
                     image = apply_color_correction(p.color_corrections[i], image)
 
                 if p.overlay_images is not None and i < len(p.overlay_images):
@@ -445,9 +450,9 @@ class StableDiffusionProcessingImg2Img(StableDiffusionProcessing):
 
         latent_mask = self.latent_mask if self.latent_mask is not None else self.image_mask
 
-        self.color_corrections = []
+        self.color_corrections = self.color_corrections or []
         imgs = []
-        for img in self.init_images:
+        for i, img in enumerate(self.init_images):
             image = img.convert("RGB")
 
             if crop_region is None:
@@ -468,7 +473,9 @@ class StableDiffusionProcessingImg2Img(StableDiffusionProcessing):
                     image = fill(image, latent_mask)
 
             if opts.img2img_color_correction:
-                self.color_corrections.append(setup_color_correction(image))
+                if len(self.color_corrections) == i:
+                    logging.info("color_corrections length is %s, computing new target for img %s", len(self.color_corrections), i+1)
+                    self.color_corrections.append(setup_color_correction(image))
 
             image = np.array(image).astype(np.float32) / 255.0
             image = np.moveaxis(image, 2, 0)

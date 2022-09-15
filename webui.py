@@ -24,6 +24,8 @@ import modules.extras
 import modules.lowvram
 import modules.txt2img
 import modules.img2img
+import logging
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 
 
 modules.codeformer_model.setup_codeformer()
